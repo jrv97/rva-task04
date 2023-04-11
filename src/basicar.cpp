@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     VideoWriter writer;
     int codec = VideoWriter::fourcc('M', 'J', 'P', 'G'); // select video codec
     double fps = 25.0;                                   // framerate of the created video stream
-    string filename = "./output_video.avi";              // name of the output video file
+    string filename = "../data/output.avi";              // name of the output video file
     writer.open(filename, codec, fps, img_model.size(), true);
     // check if we succeeded
     if (!writer.isOpened())
@@ -152,31 +152,32 @@ int main(int argc, char **argv)
         vector<Point2f> pts_obj_in_scene;
         rva_localizaObj(img_model, img_scene, keypoints_model, keypoints_scene, matches, H, pts_obj_in_scene);
 
-        // Warp the patch to the object using OpenCV
+        Mat patch;
+        // If use_video2, read the frame and resize it to the size of the patch (TODO ok)
         if (use_video2)
         {
-            // If use video2, read the frame and resize it to the size of the patch (TODO ok)
             // Read the next frame from the input stream and resize it so that it fits in our model
-            Mat frame2;
-            cap2 >> frame2;
-            resize(frame2, frame2, img_scene.size());
-            // Overlay the patch on the object
-            rva_dibujaPatch(img_scene, frame2, H, img_scene);
+            cap2 >> patch;
+            resize(patch, patch, img_scene.size());
         }
-        // if (!img_patch.empty() && !use_video2) {
-        if (!img_patch.empty())
+        // Otherwise, use img_patch as patch
+        else if (!img_patch.empty())
         {
-            rva_dibujaPatch(img_scene, img_patch, H, img_scene);
+            patch = img_patch;
         }
-
+        if (!patch.empty())
+        {
+            // Warp the patch to the object using OpenCV
+            rva_dibujaPatch(img_scene, patch, H, img_scene);
+        }
         // Draw the bounding-box
         rva_draw_contour(img_scene, pts_obj_in_scene, Scalar(0, 255, 0), 4);
 
         // Show the result
         imshow("AugmentedReality", img_scene);
 
-        // Resize to full before saving to video
-        cv::resize(img_scene, img_scene, img_model.size(), 1, 1);
+        // Save frame to the output video (resize to full scale before doing so)
+        resize(img_scene, img_scene, img_model.size(), 1, 1);
         writer.write(img_scene);
 
         // Check pressed keys to take action (TODO ok)
@@ -196,10 +197,8 @@ int main(int argc, char **argv)
             auto tm = *localtime(&t);
             ostringstream oss;
             oss << put_time(&tm, "%d-%m-%Y %H-%M-%S");
-
             // Save the screenshot to a file
             imwrite("../data/screenshots/screenshot" + oss.str() + ".jpg", img_scene);
-
             // Notify the user that the screenshot was saved
             cout << "Screenshot saved to ../data/screenshots/screenshot" + oss.str() + ".jpg" << endl;
         }
