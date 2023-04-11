@@ -132,7 +132,6 @@ int main(int argc, char **argv)
 
     while (cap.read(img_scene))
     {
-
         // To speed up processing, resize the image to half
         resize(img_scene, img_scene, img_model.size(), 0.5, 0.5);
 
@@ -157,19 +156,12 @@ int main(int argc, char **argv)
         if (use_video2)
         {
             // If use video2, read the frame and resize it to the size of the patch (TODO ok)
-            // Read the next frame from the input stream
-            // If use video2, read the frame and resize it to the size of the patch
-            // Tanto si es un archivo de video, la webcam o algun otro dispositivo de Stream, aqui leemos frame by frame
-            cv::Mat frame2;
+            // Read the next frame from the input stream and resize it so that it fits in our model
+            Mat frame2;
             cap2 >> frame2;
-            cv::resize(frame2, frame2, img_scene.size());
-
-            // Warp the patch
-            cv::Mat warped_patch;
-            cv::warpPerspective(frame2, warped_patch, H, img_scene.size());
-
+            resize(frame2, frame2, img_scene.size());
             // Overlay the patch on the object
-            rva_dibujaPatch(img_scene, warped_patch, H, img_scene);
+            rva_dibujaPatch(img_scene, frame2, H, img_scene);
         }
         // if (!img_patch.empty() && !use_video2) {
         if (!img_patch.empty())
@@ -183,8 +175,11 @@ int main(int argc, char **argv)
         // Show the result
         imshow("AugmentedReality", img_scene);
 
-        // Check pressed keys to take action (TODO ok)
+        // Resize to full before saving to video
+        cv::resize(img_scene, img_scene, img_model.size(), 1, 1);
+        writer.write(img_scene);
 
+        // Check pressed keys to take action (TODO ok)
         // Check for user input
         int key = waitKey(1);
         // Exit the program if the user presses the 'q' or 'Esc' key
