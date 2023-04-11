@@ -1,0 +1,4 @@
+src/data/screenshots/screenshot*.jpg
+src/data/output.avi
+src/build/
+.vscode/
