@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/tensai/Documents/dev/task04/src/build",
+  "command": "/usr/bin/g++  -isystem /usr/include/opencv4 -std=c++11 -g -o CMakeFiles/basicar.dir/basicar.cpp.o -c /home/tensai/Documents/dev/task04/src/basicar.cpp",
+  "file": "/home/tensai/Documents/dev/task04/src/basicar.cpp"
+},
+{
+  "directory": "/home/tensai/Documents/dev/task04/src/build",
+  "command": "/usr/bin/g++  -isystem /usr/include/opencv4 -std=c++11 -g -o CMakeFiles/basicar.dir/rva.cpp.o -c /home/tensai/Documents/dev/task04/src/rva.cpp",
+  "file": "/home/tensai/Documents/dev/task04/src/rva.cpp"
+}
+]
