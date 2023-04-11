@@ -76,6 +76,7 @@ void rva_localizaObj(const Mat &img1, const Mat &img2, const vector<KeyPoint> &k
     perspectiveTransform(obj_corners, pts_im2, homography);
 }
 
+// TASK 4
 /*
  * Generates a binary mask that can be used to control the blending of the warped patch image with the scene image.
  * The mask has the same dimensions as the warped patch image and contains 255 in the regions where the warped patch
@@ -89,7 +90,6 @@ Mat getMask(const Mat &warpedPatch)
     return mask;
 }
 
-// TASK 4
 void rva_dibujaPatch(const Mat &scene, const Mat &patch, const Mat &H, Mat &output)
 {
     auto size = scene.size();
