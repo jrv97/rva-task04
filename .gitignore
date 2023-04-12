@@ -1,6 +1,3 @@
-src/data/screenshots/screenshot*.jpg
-src/data/output.avi
-src/build/
 .vscode/
 # Raspberry Pi Pico Object file
 *.uf2
@@ -1053,4 +1050,7 @@ dkms.conf
 *.uf2
 # Raspberry Pi Pico disassembler file
 *.dis
+src/data/screenshots/screenshot*.jpg
+src/data/output.avi
 src/build/
+!src/build/build_dir
