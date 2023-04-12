@@ -40,9 +40,9 @@ int main(int argc, char **argv)
     // Video2 has priority over patch
     bool use_video2 = !video2_path.empty();
     bool use_webcam = !webcam_path.empty();
-    bool use_patch = !patch_path.empty() && !use_video2;
+    bool use_patch = !patch_path.empty() && !(use_video2 || use_webcam);
 
-    if (!use_video2 && !use_patch)
+    if (!use_video2 && !use_webcam && !use_patch)
     {
         cout << "Error: no patch or video2" << endl;
         return -1;
@@ -56,35 +56,29 @@ int main(int argc, char **argv)
         img_patch = imread(patch_path, IMREAD_COLOR);
 
     // Check if the images are loaded
-    try
+    if (img_model.empty())
     {
-        if (img_model.empty())
-        {
-            throw runtime_error("Error: failed to load model image from file: " + model_path);
-        }
-        if (use_patch && img_patch.empty())
-        {
-            throw runtime_error("Error: failed to load patch image from file: " + patch_path);
-        }
+        cerr << "Error: failed to load model image from file: " << model_path;
+        return -1;
     }
-    catch (const exception &ex)
+    if (use_patch && img_patch.empty())
     {
-        cout << "Error: " << ex.what() << endl;
+        cerr << "Error: failed to load patch image from file: " << patch_path;
         return -1;
     }
 
     // Change resolution of the image model to half
-    resize(img_model, img_model, Size(), 0.5, 0.5);
+    cv::resize(img_model, img_model, Size(), 0.5, 0.5);
 
-    // Resize the patch to the size of the model
+    // cv::resize the patch to the size of the model
     if (use_patch)
-        resize(img_patch, img_patch, img_model.size());
+        cv::resize(img_patch, img_patch, img_model.size());
 
     // Create the video capture
     VideoCapture cap(video_path);
     if (!cap.isOpened())
     {
-        cout << "Error: video not loaded: " + video_path << endl;
+        cerr << "Error: video not loaded: " + video_path << endl;
         return -1;
     }
 
@@ -95,8 +89,8 @@ int main(int argc, char **argv)
         video2_source.open(video2_path);
         if (!video2_source.isOpened())
         {
-            cout << "Error: Failed to open video file: " << video2_path
-                 << ". Please check that the file exists and try again." << endl;
+            cerr << "Error: Failed to open video file: " << video2_path
+                 << ". Please check that the file exists and you have read privileges to open it." << endl;
             return -1;
         }
     }
@@ -104,10 +98,11 @@ int main(int argc, char **argv)
     {
         int webcam_idx = stoi(webcam_path);
         video2_source.open(webcam_idx);
-        if (!cap.isOpened())
+
+        if (!video2_source.isOpened())
         {
             cerr << "Failed to open the camera " << webcam_path
-                 << ". Please check that the webam is propperly connected." << endl;
+                 << ". Please check that the webcam is properly connected." << endl;
             return -1;
         }
     }
@@ -119,13 +114,16 @@ int main(int argc, char **argv)
 
     // For each video frame, detect the object and overlay the patch
     Mat img_scene;
-    Size frameSize;
     vector<Mat> frames;
-
+    Mat patch;
+    if (!img_patch.empty())
+    {
+        patch = img_patch;
+    }
     while (cap.read(img_scene))
     {
-        // To speed up processing, resize the image to half
-        resize(img_scene, img_scene, img_model.size(), 0.5, 0.5);
+        // To speed up processing, cv::resize the image to half
+        cv::resize(img_scene, img_scene, img_model.size(), 0.5, 0.5);
 
         // Compute keypoints and descriptors for the scene image
         vector<KeyPoint> keypoints_scene;
@@ -141,18 +139,12 @@ int main(int argc, char **argv)
         vector<Point2f> pts_obj_in_scene;
         rva_localizaObj(img_model, img_scene, keypoints_model, keypoints_scene, matches, H, pts_obj_in_scene);
 
-        Mat patch;
-        // If use_video2, read the frame and resize it to the size of the patch
-        if (use_video2)
+        // When using a video2_source, read the frame and resize it to the size of the patch
+        if (use_video2 || use_webcam)
         {
-            // Read the next frame from the input stream and resize it so that it fits in our model
+            // Read the next frame from the input stream and cv::resize it so that it fits in our model
             video2_source >> patch;
-            resize(patch, patch, img_scene.size());
-        }
-        // Otherwise, use img_patch as patch
-        else if (!img_patch.empty())
-        {
-            patch = img_patch;
+            cv::resize(patch, patch, img_scene.size());
         }
         if (!patch.empty())
         {
@@ -163,30 +155,25 @@ int main(int argc, char **argv)
         rva_draw_contour(img_scene, pts_obj_in_scene, Scalar(0, 255, 0), 4);
 
         // Show the result
-        imshow("AugmentedReality", img_scene);
+        cv::imshow("AugmentedReality", img_scene);
 
         // Save each frame wot collect them all, we will write them later to an output video using a VideoWriter object
         Mat frame = img_scene.clone();
         // Save them with full/original scale
-        resize(frame, frame, img_model.size(), 1, 1);
+        cv::resize(frame, frame, img_model.size(), 1, 1);
         frames.push_back(frame);
-        // Set the frame size if it hasn't been set yet
-        if (frameSize.empty())
-        {
-            frameSize = frame.size();
-        }
 
         // Check pressed keys to take action
         // Check for user input
-        int key = waitKey(1);
+        int onKeyPress = waitKey(1);
         // Exit the program if the user presses the 'q' or 'Esc' key
-        if (key == 27 || key == 'q')
+        if (onKeyPress == 27 || onKeyPress == 'q')
         {
-            cout << "Exiting program." << endl;
+            cout << "Execution terminated. Exiting..." << endl;
             break;
         }
         // Take a screenshot of the current scene if the user presses the 's' key
-        if (key == 's')
+        if (onKeyPress == 's')
         {
             string filename = "../data/screenshots/screenshot_" + to_string(++screenshots_cnt) + ".jpg";
             imwrite(filename, frame);
@@ -198,7 +185,7 @@ int main(int argc, char **argv)
     const string outputFile = "../data/output.avi"; // Or "output.mp4" for .mp4 files
     const int frameRate = 30;
     VideoWriter videoWriter;
-    videoWriter.open(outputFile, VideoWriter::fourcc(codec[0], codec[1], codec[2], codec[3]), frameRate, frameSize, true);
+    videoWriter.open(outputFile, VideoWriter::fourcc(codec[0], codec[1], codec[2], codec[3]), frameRate, frames[0].size(), true);
     if (!videoWriter.isOpened())
     {
         cerr << "Could not open the output video file for writing" << endl;
@@ -211,6 +198,6 @@ int main(int argc, char **argv)
     cout << "Video saved to " << outputFile << endl; // Release the video writer to close the output video file
     videoWriter.release();
 
-    // The camera will be de-initialized automatically in VideoCapture destructor
+    // The camera will be disposed automatically in VideoCapture destructor
     return 0;
 }
