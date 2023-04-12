@@ -2,10 +2,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/calib3d.hpp>
 #include "rva.h"
-#include <chrono>
-#include <ctime>
-#include <iomanip>
-#include <sstream>
 
 using namespace cv;
 using namespace std;
@@ -14,8 +10,9 @@ const String keys =
     "{help h usage ? |      | print this message   }"
     "{@model         |<none>| Path to image model.}"
     "{@video         |<none>| Path to video scene.}"
-    "{patch         |<none>| Path to image patch.}"
-    "{video2         |<none>| Path to a second video.}";
+    "{patch          |<none>| Path to image patch.}"
+    "{video2         |<none>| Path to a second video.}"
+    "{index-cam      |<none>| Webcam index to use.}";
 
 // Main function
 int main(int argc, char **argv)
@@ -35,12 +32,14 @@ int main(int argc, char **argv)
 
     // Second video argument is available?
     string video2_path = parser.get<string>("video2");
+    string webcam_path = parser.get<string>("index-cam");
 
     // Count for ScreenShots Name
     int screenshots_cnt = 0;
 
     // Video2 has priority over patch
     bool use_video2 = !video2_path.empty();
+    bool use_webcam = !webcam_path.empty();
     bool use_patch = !patch_path.empty() && !use_video2;
 
     if (!use_video2 && !use_patch)
@@ -56,7 +55,7 @@ int main(int argc, char **argv)
     if (use_patch)
         img_patch = imread(patch_path, IMREAD_COLOR);
 
-    // Check if the images are loaded (TODO ok)
+    // Check if the images are loaded
     try
     {
         if (img_model.empty())
@@ -89,25 +88,26 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    // If you use video2, create the video capture (TODO ok)
-    VideoCapture cap2;
+    // If you use video2, create the video capture
+    VideoCapture video2_source;
     if (use_video2)
     {
-        cap2.open(video2_path);
-        // Check if the input was successfully opened
-        if (!cap2.isOpened())
+        video2_source.open(video2_path);
+        if (!video2_source.isOpened())
         {
-            // If the input is a webcam or a video file, show an appropriate error message
-            if (isdigit(video2_path[0]))
-            {
-                cout << "Error: Failed to open webcam with index " << video2_path
-                     << ". Please check that the webcam is connected and try again." << endl;
-            }
-            else
-            {
-                cout << "Error: Failed to open video file: " << video2_path
-                     << ". Please check that the file exists and try again." << endl;
-            }
+            cout << "Error: Failed to open video file: " << video2_path
+                 << ". Please check that the file exists and try again." << endl;
+            return -1;
+        }
+    }
+    else if (use_webcam)
+    {
+        int webcam_idx = stoi(webcam_path);
+        video2_source.open(webcam_idx);
+        if (!cap.isOpened())
+        {
+            cerr << "Failed to open the camera " << webcam_path
+                 << ". Please check that the webam is propperly connected." << endl;
             return -1;
         }
     }
@@ -142,11 +142,11 @@ int main(int argc, char **argv)
         rva_localizaObj(img_model, img_scene, keypoints_model, keypoints_scene, matches, H, pts_obj_in_scene);
 
         Mat patch;
-        // If use_video2, read the frame and resize it to the size of the patch (TODO ok)
+        // If use_video2, read the frame and resize it to the size of the patch
         if (use_video2)
         {
             // Read the next frame from the input stream and resize it so that it fits in our model
-            cap2 >> patch;
+            video2_source >> patch;
             resize(patch, patch, img_scene.size());
         }
         // Otherwise, use img_patch as patch
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
             frameSize = frame.size();
         }
 
-        // Check pressed keys to take action (TODO ok)
+        // Check pressed keys to take action
         // Check for user input
         int key = waitKey(1);
         // Exit the program if the user presses the 'q' or 'Esc' key
@@ -188,14 +188,8 @@ int main(int argc, char **argv)
         // Take a screenshot of the current scene if the user presses the 's' key
         if (key == 's')
         {
-            auto now = chrono::system_clock::now();
-            auto now_c = chrono::system_clock::to_time_t(now);
-            auto ms = chrono::duration_cast<chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
-            ostringstream oss;
-            oss << put_time(localtime(&now_c), "%Y-%m-%d_%H-%M-%S") << "_" << setfill('0') << setw(3) << ms.count();
-            string filename = "../data/screenshots/screenshot_" + oss.str() + ".jpg";
-            imwrite(filename, img_scene);
+            string filename = "../data/screenshots/screenshot_" + to_string(++screenshots_cnt) + ".jpg";
+            imwrite(filename, frame);
             cout << "Screenshot saved as " << filename << endl;
         }
     }
