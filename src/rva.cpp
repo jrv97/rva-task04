@@ -6,6 +6,43 @@
 using namespace cv;
 using namespace std;
 
+Ptr<Feature2D> get_descriptor(const string &key)
+{
+    map<string, function<Ptr<Feature2D>()>> descriptor_map =
+        {
+            {"AKAZE", []()
+             { return AKAZE::create(); }},
+            {"BRISK", []()
+             { return BRISK::create(); }},
+            {"ORB", []()
+             { return ORB::create(); }},
+            {"KAZE", []()
+             { return KAZE::create(); }},
+            {"SIFT", []()
+             { return SIFT::create(); }}};
+
+    auto it = descriptor_map.find(key);
+    return it->second();
+}
+
+Ptr<DescriptorMatcher> get_matcher(const string &key)
+{
+    map<string, function<Ptr<DescriptorMatcher>()>> matcher_map =
+        {
+            {"AKAZE", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::BRUTEFORCE_HAMMING); }},
+            {"BRISK", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::BRUTEFORCE_HAMMING); }},
+            {"ORB", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::BRUTEFORCE_HAMMING); }},
+            {"KAZE", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::FLANNBASED); }},
+            {"SIFT", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::FLANNBASED); }}};
+    auto it = matcher_map.find(key);
+    return it->second();
+}
+
 // TASK 1
 Mat rva_compute_homography(vector<Point2f> points_image1, vector<Point2f> points_image2)
 {
@@ -26,16 +63,17 @@ void rva_deform_image(const Mat &im_input, Mat &im_output, Mat homography)
 }
 
 // TASK 2
-void rva_calculaKPsDesc(const Mat &img, vector<KeyPoint> &keypoints, Mat &descriptors)
+void rva_calculaKPsDesc(const Mat &img, vector<KeyPoint> &keypoints, Mat &descriptors, const string &descriptorKey)
 {
-    auto detector = SIFT::create();
-    detector->detectAndCompute(img, noArray(), keypoints, descriptors);
+    auto descriptor_obj = get_descriptor(descriptorKey);
+
+    descriptor_obj->detectAndCompute(img, noArray(), keypoints, descriptors);
     Mat img_keypoints;
 }
 
-void rva_matchDesc(const Mat &descriptors1, const Mat &descriptors2, vector<DMatch> &matches)
+void rva_matchDesc(const Mat &descriptors1, const Mat &descriptors2, vector<DMatch> &matches, const string &descriptorKey)
 {
-    Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+    auto matcher = get_matcher(descriptorKey);
     vector<vector<DMatch>> knn_matches;
     matcher->knnMatch(descriptors1, descriptors2, knn_matches, 2);
     //-- Filter matches using the Lowe's ratio test

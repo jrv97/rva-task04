@@ -30,6 +30,18 @@ The second example is very similar, but the overlayed asset is another video:
 - Pressing `Esc` or `Q` while running the project will terminate its execution.
 - When the execution ends, the rendered video can be found in `src/build/data/output.avi`.
 
-# Rendering Simbad with OVIS
+# Specifying descriptors to use
+The solution accepts specifying different descriptors:
+- SIFT (default)
+- ORB
+- BRISK
+- AKAZE
+- KAZE
 
-to-do
+To specify a descriptor, pass the argument using `--desc=<descriptor-to-use>`, for example:
+
+```[bash]
+./basicar ../data/original.jpg ../data/video.mp4 --patch=../data/patch.jpg --video2=../data/video2.mp4 --desc=brisk
+```
+
+The `desc` argument is case-insensitive and if none or an empty one is provided, the code will run using SIFT.

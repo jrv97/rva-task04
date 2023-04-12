@@ -6,13 +6,27 @@
 using namespace cv;
 using namespace std;
 
+string str_to_descriptor_key(const string &input)
+{
+    if (input.empty())
+        return "SIFT";
+    auto descriptor = input;
+    transform(descriptor.begin(), descriptor.end(), descriptor.begin(), ::toupper);
+
+    if (descriptor == "AKAZE" || descriptor == "BRISK" || descriptor == "ORB" || descriptor == "KAZE" || descriptor == "SIFT")
+        return descriptor;
+    else
+        return "";
+}
+
 const String keys =
     "{help h usage ? |      | print this message   }"
     "{@model         |<none>| Path to image model.}"
     "{@video         |<none>| Path to video scene.}"
     "{patch          |<none>| Path to image patch.}"
     "{video2         |<none>| Path to a second video.}"
-    "{index-cam      |<none>| Webcam index to use.}";
+    "{index-cam      |<none>| Webcam index to use.}"
+    "{desc           |<none>| Descriptor to use. Can be sift, akaze, kaze, orb or brisk (case insensitive). Defaults to sift}";
 
 // Main function
 int main(int argc, char **argv)
@@ -24,23 +38,31 @@ int main(int argc, char **argv)
         parser.printMessage();
         return 0;
     }
-    string model_path = parser.get<string>(0);
-    string video_path = parser.get<string>(1);
+    auto model_path = parser.get<string>(0);
+    auto video_path = parser.get<string>(1);
 
     // Patch argument is available?
-    string patch_path = parser.get<string>("patch");
+    auto patch_path = parser.get<string>("patch");
 
     // Second video argument is available?
-    string video2_path = parser.get<string>("video2");
-    string webcam_path = parser.get<string>("index-cam");
+    auto video2_path = parser.get<string>("video2");
+    auto webcam_path = parser.get<string>("index-cam");
 
+    // Get descriptor to use
+    auto desc_input = parser.get<string>("desc");
+    auto descriptor = str_to_descriptor_key(desc_input);
+    if (descriptor.empty())
+    {
+        cerr << "Invalid descriptor string: " << desc_input << ". Accepted values are: sift, akaze, kaze, orb and brisk (case insensitive)" << endl;
+        return -1;
+    }
     // Count for ScreenShots Name
-    int screenshots_cnt = 0;
+    auto screenshots_cnt = 0;
 
     // Video2 has priority over patch
-    bool use_video2 = !video2_path.empty();
-    bool use_webcam = !webcam_path.empty();
-    bool use_patch = !patch_path.empty() && !(use_video2 || use_webcam);
+    auto use_video2 = !video2_path.empty();
+    auto use_webcam = !webcam_path.empty();
+    auto use_patch = !patch_path.empty() && !(use_video2 || use_webcam);
 
     if (!use_video2 && !use_webcam && !use_patch)
     {
@@ -110,7 +132,7 @@ int main(int argc, char **argv)
     // Pre-compute keypoints and descriptors for the model image
     vector<KeyPoint> keypoints_model;
     Mat descriptors_model;
-    rva_calculaKPsDesc(img_model, keypoints_model, descriptors_model);
+    rva_calculaKPsDesc(img_model, keypoints_model, descriptors_model, descriptor);
 
     // For each video frame, detect the object and overlay the patch
     Mat img_scene;
@@ -128,11 +150,11 @@ int main(int argc, char **argv)
         // Compute keypoints and descriptors for the scene image
         vector<KeyPoint> keypoints_scene;
         Mat descriptors_scene;
-        rva_calculaKPsDesc(img_scene, keypoints_scene, descriptors_scene);
+        rva_calculaKPsDesc(img_scene, keypoints_scene, descriptors_scene, descriptor);
 
         // Match the descriptors
         vector<DMatch> matches;
-        rva_matchDesc(descriptors_model, descriptors_scene, matches);
+        rva_matchDesc(descriptors_model, descriptors_scene, matches, descriptor);
 
         // Compute the bounding-box of the model in the scene
         Mat H;

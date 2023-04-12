@@ -21,14 +21,15 @@ void rva_deform_image(const cv::Mat &im_input, cv::Mat &im_output, cv::Mat homog
 //! \param img: input image
 //! \param keypoints: vector of keypoints
 //! \param descriptors: matrix of descriptors
-void rva_calculaKPsDesc(const cv::Mat &img, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
+void rva_calculaKPsDesc(const cv::Mat &img, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, const std::string &descriptorKey);
 
 //! This function matches two sets of descriptors
 //! \param descriptors1: matrix of descriptors of the first image
 //! \param descriptors2: matrix of descriptors of the second image
 //! \param matches: vector of matches
+//! \param descriptorKey: string representing the descriptor key to use. can be SIFT, AKAZE, KAZE, ORB or BRISK (case sensitive)
 
-void rva_matchDesc(const cv::Mat &descriptors1, const cv::Mat &descriptors2, std::vector<cv::DMatch> &matches);
+void rva_matchDesc(const cv::Mat &descriptors1, const cv::Mat &descriptors2, std::vector<cv::DMatch> &matches, const std::string &descriptorKey);
 
 //! This function draws the matches between two images
 //! \param img1: first image
@@ -37,6 +38,7 @@ void rva_matchDesc(const cv::Mat &descriptors1, const cv::Mat &descriptors2, std
 //! \param keypoints2: vector of keypoints of the second image
 //! \param matches: vector of matches
 //! \param img_matches: output image with the matches
+//! \param descriptorKey: string representing the descriptor key to use. can be SIFT, AKAZE, KAZE, ORB or BRISK (case sensitive)
 
 void rva_dibujaMatches(cv::Mat &img1, cv::Mat &img2, std::vector<cv::KeyPoint> &keypoints1, std::vector<cv::KeyPoint> &keypoints2, std::vector<cv::DMatch> &matches, cv::Mat &img_matches);
 

@@ -206,6 +206,135 @@ Here is an example obtained by this algorithm, which consists on a *PlayStation 
 
 ![](/home/tensai/Documents/dev/task04/src/data/screenshots/screenshot.jpg)
 
+## Passing different descriptors
+
+The solution is able to use different descriptors, that use both binary and non-binary keypoints. The binary descriptors are listed in the provided code, they are:
+
+- AKAZE
+- BRISK
+- ORB
+
+The non-binary descriptors (descriptors that use non-binary keypoints) supported are:
+
+- SIFT
+- KAZE
+
+With SIFT being the default option.
+
+To pass a descriptor to the program, we use the `--desc` parameter and then specify the descriptor name with insensitive casing. If none is specified, SIFT will be used:
+
+```cpp
+string str_to_descriptor_key(const string &input)
+{
+    if (input.empty())
+        return "SIFT";
+    auto descriptor = input;
+    // case insensitive comparisons
+    transform(descriptor.begin(), descriptor.end(), descriptor.begin(), ::toupper);
+
+    if (descriptor == "AKAZE" || descriptor == "BRISK" || descriptor == "ORB" || descriptor == "KAZE" || descriptor == "SIFT")
+        return descriptor;
+    else
+        return "";
+}
+
+// ...
+
+// Get descriptor to use
+auto desc_input = parser.get<string>("desc");
+auto descriptor = str_to_descriptor_key(desc_input);
+if (descriptor.empty())
+{
+    cerr << "Invalid descriptor string: " << desc_input << ". Accepted values are: sift, akaze, kaze, orb and brisk (case insensitive)" << endl;
+    return -1;
+}
+```
+
+To perform the case-insensitive comparisons, we compare the uppercase input to a set of predefined keys, that will be used later on too. Of course, if an invalid descriptor is specified, we log the error message listing all supported descriptors to the user.
+
+To calculate the keypoints, we modified the implementation seen in class to account for different descriptors as follows:
+
+```cpp
+void rva_calculaKPsDesc(const Mat &img, vector<KeyPoint> &keypoints, Mat &descriptors, const string &descriptorKey)
+{
+    auto descriptor_obj = get_descriptor(descriptorKey);
+    
+    // same as implementation seen in classes
+    descriptor_obj->detectAndCompute(img, noArray(), keypoints, descriptors);
+    Mat img_keypoints;
+}
+```
+
+And implemented the method  `get_descriptor(string descriptorKey)` of course. This method is very simple, it defines a dictionary with the supported keys and returns the appropriate OpenCV implementation, instead of hard-coding the implementation like we did in class:   
+
+```cpp
+Ptr<Feature2D> get_descriptor(const string &key)
+{
+    map<string, function<Ptr<Feature2D>()>> descriptor_map =
+        {
+            {"AKAZE", []()
+             { return AKAZE::create(); }},
+            {"BRISK", []()
+             { return BRISK::create(); }},
+            {"ORB", []()
+             { return ORB::create(); }},
+            {"KAZE", []()
+             { return KAZE::create(); }},
+            {"SIFT", []()
+             { return SIFT::create(); }}};
+
+    auto it = descriptor_map.find(key);
+    return it->second();
+}
+```
+
+Similarly, of course, we had to redefine our matcher since different descriptors will use different distances (for example, we cannot use a FLANN-based matcher for binary descriptors and keypoints). The method `rva_matchDesc` was modified accordingly and `get_matcher` was defined very similarly to `get_descriptor`:
+
+```cpp
+Ptr<DescriptorMatcher> get_matcher(const string &key)
+{
+    map<string, function<Ptr<DescriptorMatcher>()>> matcher_map =
+        {
+            {"AKAZE", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::BRUTEFORCE_HAMMING); }},
+            {"BRISK", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::BRUTEFORCE_HAMMING); }},
+            {"ORB", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::BRUTEFORCE_HAMMING); }},
+            {"KAZE", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::FLANNBASED); }},
+            {"SIFT", []()
+             { return DescriptorMatcher::create(DescriptorMatcher::FLANNBASED); }}};
+    auto it = matcher_map.find(key);
+    return it->second();
+}
+
+void rva_matchDesc(const Mat &descriptors1, const Mat &descriptors2, vector<DMatch> &matches, const string &descriptorKey)
+{
+    auto matcher = get_matcher(descriptorKey);
+    
+    // same as implementation seen in classes:
+    vector<vector<DMatch>> knn_matches;
+    matcher->knnMatch(descriptors1, descriptors2, knn_matches, 2);
+    //-- Filter matches using the Lowe's ratio test
+    const float ratio_thresh = 0.75f;
+    for (size_t i = 0; i < knn_matches.size(); i++)
+        if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance)
+            matches.push_back(knn_matches[i][0]);
+}
+```
+
+After executing tests with different video samples that used different camera angles, we arrived at some observations on how these detectors compared:
+
+- SIFT was the second best in terms of accuracy for eliminating false-matches of keypoints. The result was very consistent, the patch image was almost at all times overlapping the scene correctly.
+- BRISK and AKAZE performed similarly to SIFT in terms of accuracy, but failed to detect or eliminate a noticeable amount of false matches, which resulted on the edges being detected incorrectly sometimes. However, the results were acceptable and AKAZE performed faster than both BRISK and SIFT, while obtaining similar results for most camera angles.
+- ORB performed the best in terms of speed among the feature detectors we tested, but it also was the one that failed to detect the most false matches. This resulted in a noticeable unstable result, specially when the camera was rotating, but the speed increase was more than double when compared to SIFT.
+- KAZE performed the best in terms of accuracy. During our tests with multiple videos and angles, produced almost no false matches, resulting in an almost perfect overlap of the patch image on the scene for most camera angles. However, it performed extremely slow when compared to the other detectors, being more than 5 times slower than SIFT for some tests. 
+
+SIFT offered the best balance between accuracy and speed, performing better than BRISK, AKAZE and ORB for most scenarios and being faster than KAZE and BRISK, and almost as fast as AKAZE. For this reason, we coded it as the default descriptor option when none is specified.
+
+Nonetheless, it is important to note that the *"fastest"*, *"most accurate"* or *"best performing"* descriptor always depends on the specific application and hardware being used, as well as the quality and angles of images and videos themselves and the requirements of the problem. These conclusions are based on the experimentation for this scenario only.
+
 ## Saving the execution result into an output video
 
 An optional task was saving the video of the execution once it finishes. To achieve this, there are two approaches:
