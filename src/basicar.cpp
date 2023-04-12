@@ -194,10 +194,9 @@ int main(int argc, char **argv)
 
             ostringstream oss;
             oss << put_time(localtime(&now_c), "%Y-%m-%d_%H-%M-%S") << "_" << setfill('0') << setw(3) << ms.count();
-
             string filename = "../data/screenshots/screenshot_" + oss.str() + ".jpg";
             imwrite(filename, img_scene);
-            cout << "Screenshot saved to " << filename << endl;
+            cout << "Screenshot saved as " << filename << endl;
         }
     }
 
@@ -208,7 +207,7 @@ int main(int argc, char **argv)
     videoWriter.open(outputFile, VideoWriter::fourcc(codec[0], codec[1], codec[2], codec[3]), frameRate, frameSize, true);
     if (!videoWriter.isOpened())
     {
-        cerr << "Could not open the output video file for writing." << endl;
+        cerr << "Could not open the output video file for writing" << endl;
         return -1;
     } // Write all frames to the video file
     for (const auto &frame : frames)
