@@ -1,3 +1,0 @@
-/home/tensai/Documents/dev/task04/src/build/CMakeFiles/basicar.dir
-/home/tensai/Documents/dev/task04/src/build/CMakeFiles/edit_cache.dir
-/home/tensai/Documents/dev/task04/src/build/CMakeFiles/rebuild_cache.dir
