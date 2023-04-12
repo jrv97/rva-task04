@@ -1052,5 +1052,5 @@ dkms.conf
 *.dis
 src/data/screenshots/screenshot*.jpg
 src/data/output.avi
-src/build/
-!src/build/build_dir
+src/build/**/
+src/build/basicar
