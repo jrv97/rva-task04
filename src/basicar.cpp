@@ -196,8 +196,8 @@ int main(int argc, char **argv)
         }
     }
 
-    const string outputFile = "../data/output.avi"; // Or "output.mp4" for .mp4 files
     const string codec = "MJPG";                    // Or "mp4v" for .mp4 files
+    const string outputFile = "../data/output.avi"; // Or "output.mp4" for .mp4 files
     const int frameRate = 30;
     VideoWriter videoWriter;
     videoWriter.open(outputFile, VideoWriter::fourcc(codec[0], codec[1], codec[2], codec[3]), frameRate, frameSize, true);
