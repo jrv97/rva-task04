@@ -113,30 +113,15 @@ int main(int argc, char **argv)
     Mat descriptors_model;
     rva_calculaKPsDesc(img_model, keypoints_model, descriptors_model);
 
-    //--- INITIALIZE VIDEOWRITER
-    VideoWriter writer;
-    int codec = VideoWriter::fourcc('M', 'J', 'P', 'G'); // select video codec
-    double fps = 25.0;                                   // framerate of the created video stream
-    string filename = "../data/output.avi";              // name of the output video file
-    writer.open(filename, codec, fps, img_model.size(), true);
-    // check if we succeeded
-    if (!writer.isOpened())
-    {
-        cerr << "Could not open the output video file for write\n";
-        return -1;
-    }
-
     // For each video frame, detect the object and overlay the patch
     Mat img_scene;
-    Mat original_img_scene;
+    Size frameSize;
+    vector<Mat> frames;
 
     while (cap.read(img_scene))
     {
         // To speed up processing, resize the image to half
         resize(img_scene, img_scene, img_model.size(), 0.5, 0.5);
-
-        // Clone Image Scene
-        original_img_scene = img_scene.clone();
 
         // Compute keypoints and descriptors for the scene image
         vector<KeyPoint> keypoints_scene;
@@ -176,9 +161,16 @@ int main(int argc, char **argv)
         // Show the result
         imshow("AugmentedReality", img_scene);
 
-        // Save frame to the output video (resize to full scale before doing so)
-        resize(img_scene, img_scene, img_model.size(), 1, 1);
-        writer.write(img_scene);
+        // Save each frame wot collect them all, we will write them later to an output video using a VideoWriter object
+        Mat frame = img_scene.clone();
+        // Save them with full/original scale
+        resize(frame, frame, img_model.size(), 1, 1);
+        frames.push_back(frame);
+        // Set the frame size if it hasn't been set yet
+        if (frameSize.empty())
+        {
+            frameSize = frame.size();
+        }
 
         // Check pressed keys to take action (TODO ok)
         // Check for user input
@@ -203,6 +195,23 @@ int main(int argc, char **argv)
             cout << "Screenshot saved to ../data/screenshots/screenshot" + oss.str() + ".jpg" << endl;
         }
     }
+
+    const string outputFile = "../data/output.avi"; // Or "output.mp4" for .mp4 files
+    const string codec = "MJPG";                    // Or "mp4v" for .mp4 files
+    const int frameRate = 30;
+    VideoWriter videoWriter;
+    videoWriter.open(outputFile, VideoWriter::fourcc(codec[0], codec[1], codec[2], codec[3]), frameRate, frameSize, true);
+    if (!videoWriter.isOpened())
+    {
+        cerr << "Could not open the output video file for writing." << endl;
+        return -1;
+    } // Write all frames to the video file
+    for (const auto &frame : frames)
+    {
+        videoWriter.write(frame);
+    }
+    cout << "Video saved to " << outputFile << endl; // Release the video writer to close the output video file
+    videoWriter.release();
 
     // The camera will be de-initialized automatically in VideoCapture destructor
     return 0;

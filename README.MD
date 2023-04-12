@@ -28,7 +28,7 @@ The second example is very similar, but the overlayed asset is another video:
 
 - Pressing `S` while running the project will save a screenshot into `src/build/data/screenshots`. The exact name and path will also be logged in the console.
 - Pressing `Esc` or `Q` while running the project will terminate its execution.
-- When the execution ends, the rendered video can be found in`src/build/data/output.avi`.
+- When the execution ends, the rendered video can be found in `src/build/data/output.avi`.
 
 # Rendering Simbad with OVIS
 
