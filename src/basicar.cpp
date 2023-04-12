@@ -2,6 +2,10 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/calib3d.hpp>
 #include "rva.h"
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 using namespace cv;
 using namespace std;
@@ -184,15 +188,16 @@ int main(int argc, char **argv)
         // Take a screenshot of the current scene if the user presses the 's' key
         if (key == 's')
         {
-            // Get the current date and time to use in the screenshot filename
-            auto t = time(nullptr);
-            auto tm = *localtime(&t);
+            auto now = chrono::system_clock::now();
+            auto now_c = chrono::system_clock::to_time_t(now);
+            auto ms = chrono::duration_cast<chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
             ostringstream oss;
-            oss << put_time(&tm, "%d-%m-%Y %H-%M-%S");
-            // Save the screenshot to a file
-            imwrite("../data/screenshots/screenshot" + oss.str() + ".jpg", img_scene);
-            // Notify the user that the screenshot was saved
-            cout << "Screenshot saved to ../data/screenshots/screenshot" + oss.str() + ".jpg" << endl;
+            oss << put_time(localtime(&now_c), "%Y-%m-%d_%H-%M-%S") << "_" << setfill('0') << setw(3) << ms.count();
+
+            string filename = "../data/screenshots/screenshot_" + oss.str() + ".jpg";
+            imwrite(filename, img_scene);
+            cout << "Screenshot saved to " << filename << endl;
         }
     }
 
