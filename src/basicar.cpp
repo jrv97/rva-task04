@@ -146,11 +146,8 @@ int main(int argc, char **argv)
             video2_source >> patch;
             cv::resize(patch, patch, img_scene.size());
         }
-        if (!patch.empty())
-        {
-            // Warp the patch to the object using OpenCV
-            rva_dibujaPatch(img_scene, patch, H, img_scene);
-        }
+        // Warp the patch to the object using OpenCV
+        rva_dibujaPatch(img_scene, patch, H, img_scene);
         // Draw the bounding-box
         rva_draw_contour(img_scene, pts_obj_in_scene, Scalar(0, 255, 0), 4);
 
